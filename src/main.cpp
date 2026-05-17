@@ -20,6 +20,7 @@
  // TODO(Andrey): добавить кнопку reboot на веб-дашборд
  // TODO(Andrey): добавить на веб-дашборд график загрузки CPU (можно с помощью Google Charts, например) ???
  // TODO(Andrey): OTA обновления прошивки (очень удобно).
+ // TODO(Andrey): добавить тесты (api, linter, и т.п.)
 
 #include <Arduino.h>
 #include <WiFi.h>
