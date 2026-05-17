@@ -98,9 +98,8 @@ void updateClock() {
     if (!getLocalTime(&ti)) return;
 
     char hhmm[6];
-    snprintf(hhmm, sizeof(hhmm), "%02d:%02d", ti.tm_hour, ti.tm_min);
+    snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
 
-    // Обновляем HH:MM только при смене
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
         clockSprite.fillSprite(C_BG);
@@ -113,20 +112,20 @@ void updateClock() {
         clockSprite.drawString(hhmm, 148, CLOCK_H/2 + 6);
     }
 
-    // ==================== ТОЛЬКО СЕКУНДЫ ====================
+    // ==================== СЕКУНДЫ ====================
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    // УВЕЛИЧЕННАЯ область очистки — убираем артефакты
-    clockSprite.fillRect(280, 15, 185, CLOCK_H - 35, C_BG);
+    // Увеличенная область очистки
+    clockSprite.fillRect(280, 15, 190, CLOCK_H - 35, C_BG);
 
     clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
     clockSprite.setTextSize(2.40f, 5.30f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
 
-    clockSprite.drawString(":", 285, CLOCK_H/2 + 6);
-    clockSprite.drawString(ss,  355, CLOCK_H/2 + 6);
+    clockSprite.drawString("-", 285, CLOCK_H/2 + 6);   // тире
+        clockSprite.drawString(ss, 370, CLOCK_H/2 + 6);   // ← секунды правее
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
