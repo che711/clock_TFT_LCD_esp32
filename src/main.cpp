@@ -151,6 +151,7 @@ void drawLayout() {
     lcd.fillRect(0, 280, SCR_W,  40, C_BAR_BG);
 }
 
+
 void updateClock() {
     if (!displayOn) return;
 
@@ -160,7 +161,6 @@ void updateClock() {
     char hhmm[6];
     snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
 
-    // HH-MM перерисовываем только при смене минуты
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
         clockSprite.fillSprite(C_BG);
@@ -171,20 +171,23 @@ void updateClock() {
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
     }
 
-    // Секунды — каждую секунду, только их область
+    // ==================== СЕКУНДЫ ====================
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
     clockSprite.fillRect(280, 15, 190, CLOCK_H - 35, C_BG);
+
     clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
     clockSprite.setTextSize(2.40f, 5.30f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  285, CLOCK_H / 2 + 6);
-    clockSprite.drawString(ss,  370, CLOCK_H / 2 + 6);
+
+    clockSprite.drawString("-", 300, CLOCK_H / 2 + 6);   // Тире — левее
+    clockSprite.drawString(ss, 385, CLOCK_H / 2 + 6);    // Секунды — заметно левее
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
+
 
 void updateBottomBar() {
     if (!displayOn) return;
