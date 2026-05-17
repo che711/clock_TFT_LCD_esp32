@@ -161,13 +161,21 @@ void updateClock() {
     char hhmm[6];
     snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
 
+    // ==================== ЧАСЫ И МИНУТЫ ====================
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
+
         clockSprite.fillSprite(C_BG);
+
         clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
-        clockSprite.setTextSize(2.40f, 5.30f);
+
+        // Было: 2.40f, 5.30f
+        // Уменьшено примерно на 5%
+        clockSprite.setTextSize(2.28f, 5.03f);
+
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
+
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
     }
 
@@ -178,12 +186,15 @@ void updateClock() {
     clockSprite.fillRect(280, 15, 190, CLOCK_H - 35, C_BG);
 
     clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
-    clockSprite.setTextSize(2.40f, 5.30f);
+
+    // Такой же scale для секунд
+    clockSprite.setTextSize(2.28f, 5.03f);
+
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
 
-    clockSprite.drawString("-", 300, CLOCK_H / 2 + 6);   // Тире — левее
-    clockSprite.drawString(ss, 385, CLOCK_H / 2 + 6);    // Секунды — заметно левее
+    clockSprite.drawString("-", 300, CLOCK_H / 2 + 6);
+    clockSprite.drawString(ss, 385, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
