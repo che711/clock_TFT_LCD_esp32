@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32-S3 Dashboard</title>
+<style>
+:root {
+  --bg:        #10131f;
+  --surface:   #181c2e;
+  --border:    rgba(255,255,255,0.07);
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --accent:    #38bdf8;
+  --good:      #34d399;
+  --warn:      #fbbf24;
+  --bad:       #f87171;
+  --purple1:   #7c3aed;
+  --purple2:   #4f46e5;
+  --orange1:   #ea580c;
+  --orange2:   #d97706;
+  --radius:    14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  padding: 16px;
+}
+/* ─── Header ─────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.header-title { font-size: 1.1em; font-weight: 700; color: var(--accent); display:flex;align-items:center;gap:6px }
+.header-meta  { color: var(--muted); font-size:.8em; font-family:monospace }
+.dot { width:8px;height:8px;border-radius:50%;background:var(--good);
+       box-shadow:0 0 6px var(--good);animation:pulse 2s infinite }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ─── Top metric cards ───────────────────────────── */
+.top-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.metric-card {
+  border-radius: var(--radius);
+  padding: 20px 20px 0;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+}
+.metric-card.purple { background: linear-gradient(135deg,#4f46e5,#7c3aed); }
+.metric-card.orange { background: linear-gradient(135deg,#b45309,#d97706); }
+.metric-card .mc-label {
+  font-size:.7em; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; opacity:.8; display:flex;align-items:center;gap:6px;
+}
+.metric-card .mc-value {
+  font-size: 3em; font-weight: 800; line-height: 1.1; margin: 10px 0 4px;
+  letter-spacing: -.02em;
+}
+.metric-card .mc-desc {
+  font-size:.75em; opacity:.65;
+  background: rgba(0,0,0,.2); border-radius:6px;
+  padding:4px 10px; display:inline-block; margin-bottom:12px;
+}
+.mc-trend-label { font-size:.65em; letter-spacing:.1em; opacity:.6; text-transform:uppercase; margin-bottom:4px }
+.mc-sparkline { width:100%; height:48px; display:block; }
+
+/* ─── System grid ────────────────────────────────── */
+.section-title {
+  font-size:.8em; font-weight:700; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--muted);
+  margin: 4px 0 10px; display:flex;align-items:center;gap:8px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.sys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.sys-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.sys-card .sc-label {
+  font-size:.65em; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted);
+  display:flex;align-items:center;gap:5px; margin-bottom:6px;
+}
+.sys-card .sc-value { font-size:1.35em; font-weight:700; font-family:monospace; }
+.sys-card .sc-sub   { font-size:.72em; color:var(--muted); margin-top:2px; }
+
+/* Progress bar */
+.pbar-wrap { background:rgba(255,255,255,.07); border-radius:4px; height:5px; margin-top:6px; }
+.pbar      { height:5px; border-radius:4px; transition:width .4s; }
+.pbar.blue   { background: linear-gradient(90deg,#38bdf8,#6366f1); }
+.pbar.green  { background: linear-gradient(90deg,#34d399,#059669); }
+.pbar.yellow { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
+
+/* WiFi signal bars */
+.wifi-bars { display:inline-flex; align-items:flex-end; gap:2px; height:16px; }
+.wb { width:4px; border-radius:2px; background:rgba(255,255,255,.15); }
+.wb.lit { background:var(--warn); }
+
+/* ─── Display control ────────────────────────────── */
+.ctrl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.ctrl-row  { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+.ctrl-row:last-child { margin:0; }
+.lbl { font-size:.75em; color:var(--muted); white-space:nowrap; }
+.toggle {
+  display:flex; border-radius:8px; overflow:hidden;
+  border:1px solid var(--border);
+}
+.toggle button {
+  border:none; padding:7px 16px; cursor:pointer; font-size:.8em;
+  font-weight:700; font-family:inherit; transition:.15s;
+  background:transparent; color:var(--muted);
+}
+.toggle button.active-on  { background:#16a34a; color:#fff; }
+.toggle button.active-off { background:#dc2626; color:#fff; }
+input[type=range] { flex:1; min-width:100px; accent-color:var(--accent); }
+.cur-file { font-family:monospace; font-size:.8em; color:var(--accent); }
+
+/* ─── File browser ───────────────────────────────── */
+.file-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.file-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.fi {
+  padding:5px 10px; border-radius:6px; cursor:pointer; font-size:.78em;
+  font-family:monospace; color:var(--muted);
+  border:1px solid var(--border); transition:.15s;
+}
+.fi:hover  { border-color:var(--accent); color:var(--accent); }
+.fi.active { background:rgba(56,189,248,.12); border-color:var(--accent); color:var(--accent); }
+
+/* ─── Action buttons ─────────────────────────────── */
+.action-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.btn {
+  flex:1; min-width:100px; padding:10px 8px;
+  border:none; border-radius:10px; cursor:pointer;
+  font-family:inherit; font-size:.82em; font-weight:700;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  transition:.15s;
+}
+.btn:hover { opacity:.85; transform:translateY(-1px); }
+.btn:active{ transform:translateY(0); }
+.btn-json   { background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; }
+.btn-list   { background:linear-gradient(135deg,#065f46,#059669); color:#fff; }
+.btn-clear  { background:linear-gradient(135deg,#374151,#4b5563); color:#fff; }
+.btn-reboot { background:linear-gradient(135deg,#9f1239,#e11d48); color:#fff; }
+
+/* ─── Log ────────────────────────────────────────── */
+.log-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.log-body {
+  background:#0a0c14; border-radius:8px; padding:10px;
+  height:160px; overflow-y:auto; font-family:monospace; font-size:.72em;
+  color:#94a3b8;
+}
+.log-body::-webkit-scrollbar { width:4px; }
+.log-body::-webkit-scrollbar-thumb { background:#334155; border-radius:2px; }
+.log-line { margin:2px 0; }
+.log-line .ts  { color:#475569; }
+.log-line .ok  { color:#34d399; }
+.log-line .inf { color:#38bdf8; }
+.log-line .wrn { color:#fbbf24; }
+
+/* ─── Footer ─────────────────────────────────────── */
+.footer { text-align:center; color:var(--muted); font-size:.7em; margin-top:12px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">
+    <span class="dot"></span>
+    ⚡ ESP32-S3 Display Server
+  </div>
+  <div class="header-meta" id="header-meta">connecting...</div>
+</div>
+
+<!-- Top metric cards -->
+<div class="top-grid">
+
+  <div class="metric-card purple">
+    <div class="mc-label">🌡️ CHIP TEMPERATURE</div>
+    <div class="mc-value" id="temp-val">–.–°C</div>
+    <div class="mc-desc">ESP32-S3 internal sensor</div>
+    <div class="mc-trend-label">TREND</div>
+    <svg class="mc-sparkline" id="spark-temp" viewBox="0 0 300 48" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div class="metric-card orange">
+    <div class="mc-label">📶 WIFI SIGNAL</div>
+    <div class="mc-value" id="rssi-val">– dBm</div>
+    <div class="mc-desc" id="rssi-desc">Signal quality</div>
+    <div class="mc-trend-label">TREND</div>
+    <svg class="mc-sparkline" id="spark-rssi" viewBox="0 0 300 48" preserveAspectRatio="none"></svg>
+  </div>
+
+</div>
+
+<!-- System & Control -->
+<div class="section-title">💻 System &amp; Control</div>
+
+<div class="sys-grid">
+
+  <div class="sys-card">
+    <div class="sc-label">⏱ Uptime</div>
+    <div class="sc-value" id="uptime" style="font-size:1.1em">–</div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">🟠 RAM (Heap)</div>
+    <div class="sc-value" id="heap-val">–</div>
+    <div class="sc-sub" id="heap-sub">–</div>
+    <div class="pbar-wrap"><div class="pbar blue" id="heap-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">🟢 PSRAM</div>
+    <div class="sc-value" id="psram-val">–</div>
+    <div class="sc-sub" id="psram-sub">–</div>
+    <div class="pbar-wrap"><div class="pbar green" id="psram-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">🔲 CPU</div>
+    <div class="sc-value" id="cpu-val">– MHz</div>
+    <div class="sc-sub" id="chip-val">–</div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">💾 Flash</div>
+    <div class="sc-value" id="flash-val">–</div>
+    <div class="sc-sub" id="sketch-val">–</div>
+    <div class="pbar-wrap"><div class="pbar yellow" id="flash-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">📡 WiFi Signal</div>
+    <div class="sc-value" style="display:flex;align-items:center;gap:8px">
+      <div class="wifi-bars" id="wifi-bars">
+        <div class="wb" style="height:4px"  id="wb1"></div>
+        <div class="wb" style="height:7px"  id="wb2"></div>
+        <div class="wb" style="height:11px" id="wb3"></div>
+        <div class="wb" style="height:15px" id="wb4"></div>
+      </div>
+      <span id="rssi-dbm">–</span>
+    </div>
+    <div class="sc-sub" id="rssi-label">–</div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">🌐 SSID</div>
+    <div class="sc-value" id="ssid-val" style="font-size:1em;word-break:break-all">–</div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sc-label">🔌 IP Address</div>
+    <div class="sc-value" id="ip-val" style="font-size:1.05em">–</div>
+    <div class="sc-sub" id="mac-val">–</div>
+  </div>
+
+</div>
+
+<!-- Display Control -->
+<div class="ctrl-card">
+  <div class="section-title" style="margin-bottom:12px">🖥️ Display Control</div>
+
+  <div class="ctrl-row">
+    <span class="lbl">Power</span>
+    <div class="toggle">
+      <button id="btn-on"  class="active-on"  onclick="setPower(1)">⏻ ON</button>
+      <button id="btn-off"                    onclick="setPower(0)">⏻ OFF</button>
+    </div>
+    <span class="lbl">Requests served: <b id="req-cnt" style="color:var(--accent)">–</b></span>
+    <span class="lbl" style="margin-left:auto">Reset: <b id="reset-reason" style="color:var(--muted)">–</b></span>
+  </div>
+
+  <div class="ctrl-row">
+    <span class="lbl">Brightness</span>
+    <input type="range" min="0" max="100" value="86" id="bright-slider"
+      oninput="document.getElementById('bright-val').textContent=this.value+'%'"
+      onchange="setBrightness(this.value)">
+    <span class="lbl" id="bright-val">86%</span>
+    <button class="btn btn-json" style="flex:none;padding:7px 12px;min-width:0"
+            onclick="setBrightness('auto')">Auto</button>
+  </div>
+
+  <div class="ctrl-row">
+    <span class="lbl">Showing on display:</span>
+    <span class="cur-file" id="cur-file">—</span>
+  </div>
+</div>
+
+<!-- File browser -->
+<div class="file-card">
+  <div class="section-title" style="margin-bottom:10px">
+    📁 SD Card Images &nbsp;
+    <span style="color:var(--muted);font-weight:400;font-size:.9em" id="file-cnt"></span>
+  </div>
+  <div class="file-grid" id="file-grid">
+    <span style="color:var(--muted)">Loading...</span>
+  </div>
+</div>
+
+<!-- Action buttons -->
+<div class="action-row">
+  <button class="btn btn-json"   onclick="openStats()">📋 JSON Stats</button>
+  <button class="btn btn-list"   onclick="openList()">📁 File List</button>
+  <button class="btn btn-clear"  onclick="clearScreen()">🗑️ Clear Screen</button>
+  <button class="btn btn-reboot" onclick="reboot()">⚡ Reboot</button>
+</div>
+
+<!-- Event log -->
+<div class="log-card">
+  <div class="log-header">
+    <div class="section-title" style="margin:0">🖥️ Event Log</div>
+    <button onclick="clearLog()"
+      style="background:none;border:1px solid var(--border);color:var(--muted);
+             border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.72em">Clear</button>
+  </div>
+  <div class="log-body" id="log"></div>
+</div>
+
+<div class="footer">
+  Auto-refresh every 2s &nbsp;·&nbsp; <span id="last-upd">–</span>
+</div>
+
+<script>
+// ── History for sparklines ──────────────────────────────────────
+const HIST = 40;
+const tempH = [], rssiH = [];
+
+function push(arr, v) {
+  arr.push(v);
+  if (arr.length > HIST) arr.shift();
+}
+
+// ── Sparkline SVG ───────────────────────────────────────────────
+function sparkline(arr, color, fillColor) {
+  if (arr.length < 2) return '';
+  const W = 300, H = 48;
+  const mn = Math.min(...arr), mx = Math.max(...arr);
+  const rng = mx - mn || 1;
+  const pts = arr.map((v,i) =>
+    `${(i/(arr.length-1)*W).toFixed(1)},${(H-(v-mn)/rng*(H-4)-2).toFixed(1)}`
+  ).join(' ');
+  return `
+    <defs>
+      <linearGradient id="sg${color}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${fillColor}" stop-opacity=".35"/>
+        <stop offset="100%" stop-color="${fillColor}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <polygon points="${pts} ${W},${H} 0,${H}"
+             fill="url(#sg${color})" />
+    <polyline points="${pts}" fill="none"
+              stroke="${fillColor}" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+// ── Utilities ───────────────────────────────────────────────────
+const kb = n => n >= 1048576 ? (n/1048576).toFixed(1)+' MB' : (n/1024).toFixed(0)+' KB';
+const pct = (free,tot) => tot > 0 ? Math.round((1-free/tot)*100) : 0;
+
+function rssiLabel(q) {
+  if (q >= 80) return 'Excellent';
+  if (q >= 60) return 'Good';
+  if (q >= 40) return 'Fair';
+  if (q >= 20) return 'Weak';
+  return 'Very weak';
+}
+
+function wifiBars(q) {
+  const thresholds = [20, 40, 65, 85];
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('wb'+i).classList.toggle('lit', q >= thresholds[i-1]);
+  }
+}
+
+// ── Log ─────────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function log(cls, msg) {
+  const now = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="ts">[${now}]</span> <span class="${cls}">${msg}</span>`;
+  logEl.appendChild(line);
+  if (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function clearLog() { logEl.innerHTML = ''; }
+
+// ── Fetch stats ─────────────────────────────────────────────────
+let prevReqs = 0;
+async function fetchStats() {
+  try {
+    const d = await (await fetch('/api/stats')).json();
+
+    // Header
+    document.getElementById('header-meta').textContent =
+      'http://'+d.ip+'  ·  '+d.date+'  ·  '+d.uptime;
+
+    // Top cards
+    const t = parseFloat(d.temp);
+    document.getElementById('temp-val').textContent = t.toFixed(1)+'°C';
+    push(tempH, t);
+    document.getElementById('spark-temp').innerHTML = sparkline(tempH, 'temp', '#a5b4fc');
+
+    const rssiQ = d.rssi_quality;
+    document.getElementById('rssi-val').textContent = d.rssi+' dBm';
+    document.getElementById('rssi-desc').textContent = rssiLabel(rssiQ)+' ('+rssiQ+'%)';
+    push(rssiH, rssiQ);
+    document.getElementById('spark-rssi').innerHTML = sparkline(rssiH, 'rssi', '#fde68a');
+
+    // System cards
+    document.getElementById('uptime').textContent = d.uptime;
+
+    const hp = pct(d.heap_free, d.heap_total);
+    document.getElementById('heap-val').textContent = kb(d.heap_free)+' free';
+    document.getElementById('heap-sub').textContent = hp+'% used · '+kb(d.heap_total)+' total';
+    document.getElementById('heap-bar').style.width = hp+'%';
+
+    const pp = pct(d.psram_free, d.psram_total);
+    document.getElementById('psram-val').textContent = kb(d.psram_free)+' free';
+    document.getElementById('psram-sub').textContent = pp+'% used · '+kb(d.psram_total)+' total';
+    document.getElementById('psram-bar').style.width = pp+'%';
+
+    document.getElementById('cpu-val').textContent = d.cpu_mhz+' MHz';
+    document.getElementById('chip-val').textContent = d.chip_model+' rev'+d.chip_revision+' / '+d.cpu_cores+' cores';
+
+    const fp = pct(d.sketch_size, d.sketch_size + d.sketch_free);
+    document.getElementById('flash-val').textContent = kb(d.flash_size)+' flash';
+    document.getElementById('sketch-val').textContent = kb(d.sketch_size)+' sketch · '+kb(d.sketch_free)+' free';
+    document.getElementById('flash-bar').style.width = fp+'%';
+
+    // WiFi
+    document.getElementById('rssi-dbm').textContent = d.rssi+' dBm';
+    document.getElementById('rssi-label').textContent = rssiLabel(rssiQ);
+    wifiBars(rssiQ);
+    document.getElementById('ssid-val').textContent = d.ssid;
+    document.getElementById('ip-val').textContent = d.ip;
+    document.getElementById('mac-val').textContent = d.mac+' · ch'+d.wifi_channel;
+
+    // Display control
+    const on = d.display_on;
+    document.getElementById('btn-on').className  = 'active-on'  + (on  ? ' active-on'  : '');
+    document.getElementById('btn-off').className = on ? '' : 'active-off';
+    document.getElementById('bright-slider').value = d.brightness_pct;
+    document.getElementById('bright-val').textContent = d.brightness_pct+'%';
+    document.getElementById('cur-file').textContent = d.current_file || '—';
+    document.getElementById('req-cnt').textContent = d.requests;
+    document.getElementById('reset-reason').textContent = d.reset_reason;
+
+    // Log new requests
+    if (d.requests > prevReqs && prevReqs > 0) {
+      log('inf', d.requests - prevReqs + ' new request(s)');
+    }
+    prevReqs = d.requests;
+
+    // Temp warning
+    if (t >= 75) log('wrn', 'High chip temp: '+t.toFixed(1)+'°C');
+
+    document.getElementById('last-upd').textContent =
+      'Updated: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    log('wrn', 'Stats fetch failed: '+e.message);
+    document.getElementById('last-upd').textContent = 'Connection error...';
+  }
+}
+
+// ── Fetch file list ─────────────────────────────────────────────
+async function fetchFiles() {
+  try {
+    const files = await (await fetch('/list')).json();
+    const cur = document.getElementById('cur-file').textContent;
+    document.getElementById('file-cnt').textContent = '('+files.length+' files)';
+    if (files.length === 0) {
+      document.getElementById('file-grid').innerHTML =
+        '<span style="color:var(--muted)">No .jpg files found in /flashcards/</span>';
+      return;
+    }
+    document.getElementById('file-grid').innerHTML = files.map(f =>
+      `<div class="fi${f===cur?' active':''}" onclick="showFile('${f}')">${f}</div>`
+    ).join('');
+  } catch(e) { log('wrn', 'File list failed'); }
+}
+
+// ── Actions ─────────────────────────────────────────────────────
+async function showFile(f) {
+  log('inf', 'Showing: '+f);
+  const r = await fetch('/show?file='+encodeURIComponent(f));
+  const d = await r.json();
+  if (d.ok) {
+    log('ok', 'Displayed: '+f);
+    document.getElementById('cur-file').textContent = f;
+    document.querySelectorAll('.fi').forEach(el =>
+      el.classList.toggle('active', el.textContent === f));
+  } else {
+    log('wrn', 'Error: '+d.error);
+  }
+}
+
+async function setPower(on) {
+  await fetch('/api/power?on='+on, {method:'POST'});
+  log('inf', 'Display '+(on?'ON':'OFF'));
+  fetchStats();
+}
+
+async function setBrightness(v) {
+  if (v === 'auto') {
+    await fetch('/api/brightness?auto=1', {method:'POST'});
+    log('inf', 'Auto brightness enabled');
+  } else {
+    await fetch('/api/brightness?value='+v, {method:'POST'});
+  }
+}
+
+async function clearScreen() {
+  await fetch('/clear');
+  log('inf', 'Screen cleared');
+  document.getElementById('cur-file').textContent = '—';
+  document.querySelectorAll('.fi').forEach(el => el.classList.remove('active'));
+}
+
+function openStats() { window.open('/api/stats', '_blank'); }
+function openList()  { window.open('/list', '_blank'); }
+
+async function reboot() {
+  if (!confirm('Reboot ESP32-S3?')) return;
+  log('wrn', 'Rebooting...');
+  await fetch('/api/reboot', {method:'POST'});
+  setTimeout(() => { log('ok', 'Reconnecting...'); fetchStats(); }, 5000);
+}
+
+// ── Init ────────────────────────────────────────────────────────
+log('ok', 'Dashboard connected');
+fetchStats();
+fetchFiles();
+setInterval(fetchStats,  2000);
+setInterval(fetchFiles, 15000);
+</script>
+</body>
+</html>
