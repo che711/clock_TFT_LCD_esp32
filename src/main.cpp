@@ -124,8 +124,8 @@ void updateClock() {
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
 
-    clockSprite.drawString("-", 285, CLOCK_H/2 + 6);   // тире
-        clockSprite.drawString(ss, 370, CLOCK_H/2 + 6);   // ← секунды правее
+    clockSprite.drawString("-", 285, CLOCK_H/2 + 6);     // тире
+    clockSprite.drawString(ss, 370, CLOCK_H/2 + 6);      // секунды — правее
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
