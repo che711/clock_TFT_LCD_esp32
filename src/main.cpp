@@ -20,7 +20,7 @@
  // TODO(Andrey): добавить кнопку reboot на веб-дашборд
  // TODO(Andrey): добавить на веб-дашборд график загрузки CPU (можно с помощью Google Charts, например) ???
  // TODO(Andrey): OTA обновления прошивки (очень удобно).
- 
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -31,7 +31,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "SkyNet"
+#define WIFI_SSID          "network"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
