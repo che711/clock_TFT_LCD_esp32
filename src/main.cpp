@@ -169,9 +169,7 @@ void updateClock() {
 
         clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
 
-        // Было: 2.40f, 5.30f
-        // Уменьшено примерно на 5%
-        clockSprite.setTextSize(2.28f, 5.03f);
+        clockSprite.setTextSize(2.16f, 4.78f);
 
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
@@ -187,8 +185,7 @@ void updateClock() {
 
     clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
 
-    // Такой же scale для секунд
-    clockSprite.setTextSize(2.28f, 5.03f);
+    clockSprite.setTextSize(2.16f, 4.78f);
 
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
