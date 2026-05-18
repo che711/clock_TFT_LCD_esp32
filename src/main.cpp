@@ -113,9 +113,9 @@ static const uint32_t C_SSID   = 0xFFE040;
 // ── Геометрия ─────────────────────────────────────────────────────
 #define SCR_W    480
 #define CLOCK_X  15
-#define CLOCK_Y  5        // было 48 — поднимаем к верху
+#define CLOCK_Y  37       // опущено на 10% высоты экрана (320×10%=32px) от Y=5
 #define CLOCK_W  450
-#define CLOCK_H  185
+#define CLOCK_H  220      // было 185 — FreeSansBold×5.04 ≈ 207px, нужен запас
 
 // Информационная полоса под часами (Y: 198..275, 77px)
 #define INFO_Y   (CLOCK_Y + CLOCK_H + 8)   // = 198
@@ -178,7 +178,7 @@ void updateClock() {
         // sx=2.4 → "HH-MM" ~260px, влезает в 450px ширины спрайта
         // sy=5.6 → ~170px высоты, заполняет 185px область
         clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);
-        clockSprite.setTextSize(2.4f, 5.6f);
+        clockSprite.setTextSize(2.16f, 5.04f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
@@ -188,10 +188,9 @@ void updateClock() {
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    // Чуть шире чем у Orbitron из-за более широких глифов FreeSans
     clockSprite.fillRect(272, 15, 178, CLOCK_H - 35, C_BG);
     clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);
-    clockSprite.setTextSize(2.4f, 5.6f);
+    clockSprite.setTextSize(2.16f, 5.04f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
     clockSprite.drawString("-",  289, CLOCK_H / 2 + 6);
