@@ -97,7 +97,7 @@ const char WEBPAGE[] PROGMEM = R"html(
     margin-bottom: 12px;
   }
   .ctrl-row:last-child { margin: 0; }
-  .ctrl-lbl { color: #8b949e; font-size: .82em; min-width: 80px; }
+  .ctrl-lbl { color: #8b949e; font-size: 1.07em; min-width: 80px; }
 
   .btn {
     padding: 7px 20px;
@@ -105,7 +105,7 @@ const char WEBPAGE[] PROGMEM = R"html(
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
-    font-size: .82em;
+    font-size: 1.07em;
     transition: all .2s;
     opacity: .45;
   }
@@ -114,14 +114,14 @@ const char WEBPAGE[] PROGMEM = R"html(
   .btn-on        { background: #238636; color: #fff; }
   .btn-off       { background: #da3633; color: #fff; }
 
-  .pwr-state { font-size: .82em; margin-left: 2px; }
+  .pwr-state { font-size: 1.07em; margin-left: 2px; }
 
   input[type=range] {
     flex: 1;
     accent-color: #58a6ff;
     cursor: pointer;
   }
-  .bright-val { color: #e6edf3; font-size: .85em; min-width: 42px; text-align: right; }
+  .bright-val { color: #e6edf3; font-size: 1.1em; min-width: 42px; text-align: right; }
 
   /* ── Карточки ── */
   .grid {
@@ -143,7 +143,7 @@ const char WEBPAGE[] PROGMEM = R"html(
     padding: 14px 16px;
   }
   .card-title {
-    font-size: .68em;
+    font-size: .88em;
     color: #484f58;
     text-transform: uppercase;
     letter-spacing: .12em;
@@ -156,7 +156,7 @@ const char WEBPAGE[] PROGMEM = R"html(
     justify-content: space-between;
     align-items: center;
     padding: 5px 0;
-    font-size: .82em;
+    font-size: 1.07em;
     border-bottom: 1px solid #0d0d12;
   }
   .row:last-child { border: none; }
@@ -182,6 +182,93 @@ const char WEBPAGE[] PROGMEM = R"html(
     pointer-events: none;
     z-index: 999;
   }
+
+  /* ── API reference ── */
+  .api-card {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 14px;
+    padding: 14px 16px;
+    width: 100%;
+    max-width: 520px;
+    font-size: 1.01em;
+  }
+  .api-card .card-title { font-size: .88em; color: #484f58; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px; border-bottom: 1px solid #161b22; padding-bottom: 6px; }
+  .api-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #0d0d12;
+  }
+  .api-row:last-child { border: none; }
+  .api-method { color: #3fb950; font-weight: bold; font-size: 1.1em; letter-spacing: .04em; }
+  .api-path   { color: #58a6ff; font-family: 'Courier New', monospace; word-break: break-all; }
+  .api-desc   { color: #484f58; text-align: right; white-space: nowrap; }
+  .btn-try    { padding: 3px 10px; border: 1px solid #30363d; border-radius: 5px; background: transparent; color: #8b949e; font-size: 1.04em; cursor: pointer; transition: all .15s; }
+  .btn-try:hover { background: #21262d; color: #e6edf3; border-color: #58a6ff; }
+
+  /* ── cURL ── */
+  .curl-card {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 14px;
+    padding: 14px 16px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .curl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid #0d0d12;
+  }
+  .curl-row:last-child { border: none; }
+  .curl-desc { color: #8b949e; font-size: 1.0em; min-width: 92px; white-space: nowrap; }
+  .curl-cmd  {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: .95em;
+    color: #79c0ff;
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 5px;
+    padding: 4px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: all;
+    cursor: text;
+  }
+  .btn-copy {
+    padding: 4px 11px;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    background: transparent;
+    color: #8b949e;
+    font-size: 1.0em;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover  { background: #21262d; color: #e6edf3; border-color: #58a6ff; }
+  .btn-copy.ok     { border-color: #3fb950; color: #3fb950; }
+
+  /* ── Reboot ── */
+  .btn-reboot {
+    padding: 8px 22px;
+    border: 1px solid #da3633;
+    border-radius: 8px;
+    background: transparent;
+    color: #f85149;
+    font-weight: bold;
+    font-size: 1.07em;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-reboot:hover { background: #da3633; color: #fff; transform: translateY(-1px); }
 
   .footer { font-size: .65em; color: #30363d; margin-top: 4px; }
 
@@ -214,6 +301,7 @@ const char WEBPAGE[] PROGMEM = R"html(
     <button class="btn btn-on"  id="btn-on"  onclick="setPower(true)">⏻ ON</button>
     <button class="btn btn-off" id="btn-off" onclick="setPower(false)">⏻ OFF</button>
     <span class="pwr-state" id="pwr-state"></span>
+    <button class="btn-reboot" onclick="doReboot()" style="margin-left:auto">↺ Reboot</button>
   </div>
 
   <div class="ctrl-row">
@@ -265,6 +353,63 @@ const char WEBPAGE[] PROGMEM = R"html(
 
 <div class="footer" id="footer">–</div>
 
+<!-- API Reference -->
+<div class="api-card">
+  <div class="card-title">API Reference</div>
+
+  <div class="api-row">
+    <span class="api-method">GET</span>
+    <span class="api-path">/api/stats</span>
+    <span class="api-desc">full JSON</span>
+  </div>
+  <div class="api-row">
+    <span class="api-method">GET</span>
+    <span class="api-path">/api/power?on=<b>1</b>|<b>0</b></span>
+    <button class="btn-try" onclick="tryApi('/api/power?on=1')">try ON</button>
+  </div>
+  <div class="api-row">
+    <span class="api-method">GET</span>
+    <span class="api-path">/api/brightness?value=<b>0..100</b></span>
+    <button class="btn-try" onclick="tryApi('/api/brightness?value=50')">try 50%</button>
+  </div>
+  <div class="api-row">
+    <span class="api-method">GET</span>
+    <span class="api-path">/api/reboot</span>
+    <button class="btn-try" onclick="doReboot()">try</button>
+  </div>
+</div>
+
+<!-- cURL Examples -->
+<div class="curl-card">
+  <div class="card-title">cURL Examples</div>
+
+  <div class="curl-row">
+    <span class="curl-desc">Stats</span>
+    <code class="curl-cmd" id="curl-stats">curl "http://.../api/stats"</code>
+    <button class="btn-copy" onclick="copyCmd('curl-stats',this)">Copy</button>
+  </div>
+  <div class="curl-row">
+    <span class="curl-desc">Display ON</span>
+    <code class="curl-cmd" id="curl-on">curl "http://.../api/power?on=1"</code>
+    <button class="btn-copy" onclick="copyCmd('curl-on',this)">Copy</button>
+  </div>
+  <div class="curl-row">
+    <span class="curl-desc">Display OFF</span>
+    <code class="curl-cmd" id="curl-off">curl "http://.../api/power?on=0"</code>
+    <button class="btn-copy" onclick="copyCmd('curl-off',this)">Copy</button>
+  </div>
+  <div class="curl-row">
+    <span class="curl-desc">Brightness</span>
+    <code class="curl-cmd" id="curl-bright">curl "http://.../api/brightness?value=80"</code>
+    <button class="btn-copy" onclick="copyCmd('curl-bright',this)">Copy</button>
+  </div>
+  <div class="curl-row">
+    <span class="curl-desc">Reboot</span>
+    <code class="curl-cmd" id="curl-reboot">curl "http://.../api/reboot"</code>
+    <button class="btn-copy" onclick="copyCmd('curl-reboot',this)">Copy</button>
+  </div>
+</div>
+
 <script>
 // ── Утилиты ──────────────────────────────────────────────────────
 const kb = n => n >= 1048576
@@ -277,7 +422,7 @@ function toast(msg, ok = true) {
   el.style.background = ok ? '#238636' : '#da3633';
   el.style.opacity = '1';
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.style.opacity = '0', 2000);
+  el._t = setTimeout(() => el.style.opacity = '0', 2500);
 }
 
 // ── RSSI: цвет + полоски ─────────────────────────────────────────
@@ -317,13 +462,48 @@ async function setBrightness(val) {
   } catch { toast('Connection error', false); }
 }
 
-// ── Обновление секунд отдельно (без мерцания времени) ────────────
+async function doReboot() {
+  if (!confirm('Reboot ESP32?')) return;
+  try {
+    await fetch('/api/reboot');
+    toast('↺ Rebooting…');
+    // Попробовать переподключиться через 5 секунд
+    setTimeout(async () => {
+      for (let i = 0; i < 10; i++) {
+        try { await fetch('/api/stats'); toast('✓ Back online'); return; } catch {}
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      toast('Still offline — refresh manually', false);
+    }, 5000);
+  } catch { toast('Connection error', false); }
+}
+
+// Кнопка «try» в таблице API
+async function tryApi(url) {
+  try {
+    const r = await fetch(url);
+    const t = await r.text();
+    toast('→ ' + t.slice(0, 60));
+  } catch { toast('Connection error', false); }
+}
+
+// Копирование curl-команды в буфер обмена
+async function copyCmd(id, btn) {
+  const text = document.getElementById(id).textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = '✓ Copied';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2000);
+  } catch { toast('Clipboard unavailable', false); }
+}
+
+// ── Обновление секунд отдельно (без мерцания) ────────────────────
 function setTime(t) {
-  const parts = t.split(':');               // ["HH", "MM", "SS"]
+  const parts = t.split(':');
   if (parts.length !== 3) return;
-  const el = document.getElementById('time');
-  el.innerHTML = parts[0] + ':' + parts[1] +
-    '<span class="secs">:' + parts[2] + '</span>';
+  document.getElementById('time').innerHTML =
+    parts[0] + ':' + parts[1] + '<span class="secs">:' + parts[2] + '</span>';
 }
 
 // ── Главный poll ─────────────────────────────────────────────────
@@ -331,7 +511,6 @@ async function refresh() {
   let d;
   try {
     d = await (await fetch('/api/stats')).json();
-    // Сбросить индикацию ошибки
     document.getElementById('clock-card').classList.remove('error');
     document.getElementById('time').classList.remove('err');
   } catch {
@@ -358,38 +537,45 @@ async function refresh() {
   document.getElementById('temp').innerHTML      = tempHtml(d.temp);
 
   const cpuC = d.cpu_load < 50 ? '#39d0d8' : d.cpu_load < 80 ? '#d29922' : '#f85149';
-  document.getElementById('cpu-val').textContent   = d.cpu_load + '%';
-  document.getElementById('cpu-val').style.color   = cpuC;
-  document.getElementById('cpu-bar').style.width   = d.cpu_load + '%';
+  document.getElementById('cpu-val').textContent      = d.cpu_load + '%';
+  document.getElementById('cpu-val').style.color      = cpuC;
+  document.getElementById('cpu-bar').style.width      = d.cpu_load + '%';
   document.getElementById('cpu-bar').style.background = cpuC;
-
-  document.getElementById('reset').textContent   = d.reset_reason;
+  document.getElementById('reset').textContent        = d.reset_reason;
 
   // RAM
   const used = d.heap_total - d.heap_free;
   const pct  = Math.round(used / d.heap_total * 100);
-  document.getElementById('ram-bar').style.width  = pct + '%';
-  document.getElementById('ram-pct-lbl').textContent = '— ' + pct + '% used';
-  document.getElementById('heap-free').textContent   = kb(d.heap_free);
-  document.getElementById('heap-used').textContent   = kb(used);
-  document.getElementById('heap-total').textContent  = kb(d.heap_total);
-  document.getElementById('heap-min').textContent    = kb(d.heap_min_free);
+  document.getElementById('ram-bar').style.width       = pct + '%';
+  document.getElementById('ram-pct-lbl').textContent   = '— ' + pct + '% used';
+  document.getElementById('heap-free').textContent     = kb(d.heap_free);
+  document.getElementById('heap-used').textContent     = kb(used);
+  document.getElementById('heap-total').textContent    = kb(d.heap_total);
+  document.getElementById('heap-min').textContent      = kb(d.heap_min_free);
 
-  // Кнопки Power — отражают реальное состояние ESP32
+  // Power кнопки
   const on = d.display_on;
   document.getElementById('btn-on').classList.toggle('active',  on);
   document.getElementById('btn-off').classList.toggle('active', !on);
-  document.getElementById('pwr-state').textContent  = on ? '● ON' : '○ OFF';
-  document.getElementById('pwr-state').style.color  = on ? '#3fb950' : '#f85149';
+  document.getElementById('pwr-state').textContent = on ? '● ON' : '○ OFF';
+  document.getElementById('pwr-state').style.color = on ? '#3fb950' : '#f85149';
 
-  // Слайдер — только если не тянут
+  // Слайдер
   if (!sliderActive) {
-    document.getElementById('bright-slider').value  = d.brightness;
-    document.getElementById('bright-val').textContent = d.brightness + '%';
+    document.getElementById('bright-slider').value     = d.brightness;
+    document.getElementById('bright-val').textContent  = d.brightness + '%';
   }
 
   document.getElementById('footer').textContent =
     'Last update: ' + new Date().toLocaleTimeString();
+
+  // Обновляем curl-примеры с реальным IP
+  const b = `http://${d.ip}`;
+  document.getElementById('curl-stats') .textContent = `curl "${b}/api/stats"`;
+  document.getElementById('curl-on')    .textContent = `curl "${b}/api/power?on=1"`;
+  document.getElementById('curl-off')   .textContent = `curl "${b}/api/power?on=0"`;
+  document.getElementById('curl-bright').textContent = `curl "${b}/api/brightness?value=80"`;
+  document.getElementById('curl-reboot').textContent = `curl "${b}/api/reboot"`;
 }
 
 refresh();
