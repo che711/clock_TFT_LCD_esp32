@@ -13,14 +13,6 @@
  *   GET /api/brightness?value=N → яркость 0..100
  */
 
- // TODO(Andrey): оптимизировать расположение времени на экране (поднять часы выше), а на свободное места вывести дату, параметры чипа и т.п.
- // TODO(Andrey): разобраться с часами. они сейчас довольно кривые и не большая разница в расстоянии между минутами, секундами и часами. 
- // ...           Идеально было бы, если бы они были расположены на одинаковом расстоянии.
- // TODO(Andrey): вынести в отдельный блок все возможноые api call-ы
- // TODO(Andrey): добавить кнопку reboot на веб-дашборд
- // TODO(Andrey): добавить на веб-дашборд график загрузки CPU (можно с помощью Google Charts, например) ???
- // TODO(Andrey): OTA обновления прошивки (очень удобно).
-
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -31,7 +23,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "network"
+#define WIFI_SSID          "SkyNet"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -121,9 +113,18 @@ static const uint32_t C_SSID   = 0xFFE040;
 // ── Геометрия ─────────────────────────────────────────────────────
 #define SCR_W    480
 #define CLOCK_X  15
-#define CLOCK_Y  48
+#define CLOCK_Y  37       // опущено на 10% высоты экрана (320×10%=32px) от Y=5
 #define CLOCK_W  450
-#define CLOCK_H  185
+#define CLOCK_H  220      // было 185 — FreeSansBold×5.04 ≈ 207px, нужен запас
+
+// Информационная полоса под часами (Y: 198..275, 77px)
+#define INFO_Y   (CLOCK_Y + CLOCK_H + 8)   // = 198
+#define INFO_CY  (INFO_Y + 38)              // = 236  центр строки
+
+// Цвета для инфо-строки
+static const uint32_t C_INFO_TEMP   = 0xE05020;  // тёплый оранжевый — температура
+static const uint32_t C_INFO_CPU    = 0x0099CC;  // синий — CPU load
+static const uint32_t C_INFO_UPTIME = 0x778899;  // серый — uptime
 
 char prevHHMM[6] = "";
 
@@ -159,7 +160,6 @@ void drawLayout() {
     lcd.fillRect(0, 280, SCR_W,  40, C_BAR_BG);
 }
 
-
 void updateClock() {
     if (!displayOn) return;
 
@@ -169,41 +169,35 @@ void updateClock() {
     char hhmm[6];
     snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
 
-    // ==================== ЧАСЫ И МИНУТЫ ====================
+    // HH-MM перерисовываем только при смене минуты
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
-
         clockSprite.fillSprite(C_BG);
-
-        clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
-
-        clockSprite.setTextSize(2.16f, 4.78f);
-
+        // FreeSansBold24pt7b — настоящий жирный вес, толстые штрихи.
+        // Orbitron_Light при 5× масштабе давал тонкие одиночные пиксели.
+        // sx=2.4 → "HH-MM" ~260px, влезает в 450px ширины спрайта
+        // sy=5.6 → ~170px высоты, заполняет 185px область
+        clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);
+        clockSprite.setTextSize(2.16f, 5.04f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
-
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
     }
 
-    // ==================== СЕКУНДЫ ====================
+    // Секунды — каждую секунду, только их область
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    clockSprite.fillRect(280, 15, 190, CLOCK_H - 35, C_BG);
-
-    clockSprite.setFont(&lgfx::fonts::Orbitron_Light_32);
-
-    clockSprite.setTextSize(2.16f, 4.78f);
-
+    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);
+    clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);   // FreeSansBold24pt7b    FreeMonoBold24pt7b
+    clockSprite.setTextSize(2.16f, 5.04f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-
-    clockSprite.drawString("-", 300, CLOCK_H / 2 + 6);
-    clockSprite.drawString(ss, 385, CLOCK_H / 2 + 6);
+    clockSprite.drawString("-",  298, CLOCK_H / 2 + 6);
+    clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
-
 
 void updateBottomBar() {
     if (!displayOn) return;
@@ -335,7 +329,16 @@ void handleBrightness() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  SERIAL — сводка каждые SERIAL_INTERVAL_MS
+//  HTTP — /api/reboot
+// ══════════════════════════════════════════════════════════════════
+void handleReboot() {
+    server.send(200, "application/json", "{\"rebooting\":true}");
+    Serial.println("[API] reboot requested");
+    delay(200);   // дать время отправить ответ
+    ESP.restart();
+}
+
+
 // ══════════════════════════════════════════════════════════════════
 void serialReport() {
     struct tm ti;
@@ -411,6 +414,7 @@ void setup() {
     server.on("/api/stats",      HTTP_GET, handleStats);
     server.on("/api/power",      HTTP_GET, handlePower);
     server.on("/api/brightness", HTTP_GET, handleBrightness);
+    server.on("/api/reboot",     HTTP_GET, handleReboot);
     server.begin();
     Serial.printf("HTTP    : http://%s/\n", WiFi.localIP().toString().c_str());
 
