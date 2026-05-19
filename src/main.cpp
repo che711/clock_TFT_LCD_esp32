@@ -188,12 +188,12 @@ void updateClock() {
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    clockSprite.fillRect(272, 15, 178, CLOCK_H - 35, C_BG);
-    clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);
+    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);
+    clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);   // FreeSansBold24pt7b    FreeMonoBold24pt7b
     clockSprite.setTextSize(2.16f, 5.04f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  289, CLOCK_H / 2 + 6);
+    clockSprite.drawString("-",  298, CLOCK_H / 2 + 6);
     clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);

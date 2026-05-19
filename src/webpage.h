@@ -183,32 +183,6 @@ const char WEBPAGE[] PROGMEM = R"html(
     z-index: 999;
   }
 
-  /* ── API reference ── */
-  .api-card {
-    background: #0d1117;
-    border: 1px solid #21262d;
-    border-radius: 14px;
-    padding: 14px 16px;
-    width: 100%;
-    max-width: 520px;
-    font-size: 1.01em;
-  }
-  .api-card .card-title { font-size: .88em; color: #484f58; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px; border-bottom: 1px solid #161b22; padding-bottom: 6px; }
-  .api-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 0;
-    border-bottom: 1px solid #0d0d12;
-  }
-  .api-row:last-child { border: none; }
-  .api-method { color: #3fb950; font-weight: bold; font-size: 1.1em; letter-spacing: .04em; }
-  .api-path   { color: #58a6ff; font-family: 'Courier New', monospace; word-break: break-all; }
-  .api-desc   { color: #484f58; text-align: right; white-space: nowrap; }
-  .btn-try    { padding: 3px 10px; border: 1px solid #30363d; border-radius: 5px; background: transparent; color: #8b949e; font-size: 1.04em; cursor: pointer; transition: all .15s; }
-  .btn-try:hover { background: #21262d; color: #e6edf3; border-color: #58a6ff; }
-
   /* ── cURL ── */
   .curl-card {
     background: #0d1117;
@@ -353,32 +327,6 @@ const char WEBPAGE[] PROGMEM = R"html(
 
 <div class="footer" id="footer">–</div>
 
-<!-- API Reference -->
-<div class="api-card">
-  <div class="card-title">API Reference</div>
-
-  <div class="api-row">
-    <span class="api-method">GET</span>
-    <span class="api-path">/api/stats</span>
-    <span class="api-desc">full JSON</span>
-  </div>
-  <div class="api-row">
-    <span class="api-method">GET</span>
-    <span class="api-path">/api/power?on=<b>1</b>|<b>0</b></span>
-    <button class="btn-try" onclick="tryApi('/api/power?on=1')">try ON</button>
-  </div>
-  <div class="api-row">
-    <span class="api-method">GET</span>
-    <span class="api-path">/api/brightness?value=<b>0..100</b></span>
-    <button class="btn-try" onclick="tryApi('/api/brightness?value=50')">try 50%</button>
-  </div>
-  <div class="api-row">
-    <span class="api-method">GET</span>
-    <span class="api-path">/api/reboot</span>
-    <button class="btn-try" onclick="doReboot()">try</button>
-  </div>
-</div>
-
 <!-- cURL Examples -->
 <div class="curl-card">
   <div class="card-title">cURL Examples</div>
@@ -478,24 +426,35 @@ async function doReboot() {
   } catch { toast('Connection error', false); }
 }
 
-// Кнопка «try» в таблице API
-async function tryApi(url) {
-  try {
-    const r = await fetch(url);
-    const t = await r.text();
-    toast('→ ' + t.slice(0, 60));
-  } catch { toast('Connection error', false); }
-}
-
 // Копирование curl-команды в буфер обмена
+// Clipboard API работает только на HTTPS/localhost.
+// На обычном HTTP используем execCommand fallback.
 async function copyCmd(id, btn) {
   const text = document.getElementById(id).textContent;
-  try {
-    await navigator.clipboard.writeText(text);
+  let ok = false;
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+  }
+
+  if (!ok) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { ok = document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+  }
+
+  if (ok) {
     btn.textContent = '✓ Copied';
     btn.classList.add('ok');
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2000);
-  } catch { toast('Clipboard unavailable', false); }
+  } else {
+    toast('Copy failed — select and Ctrl+C', false);
+  }
 }
 
 // ── Обновление секунд отдельно (без мерцания) ────────────────────
