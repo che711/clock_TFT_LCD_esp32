@@ -19,11 +19,12 @@
 #include <time.h>
 #include <LovyanGFX.hpp>
 #include "webpage.h"
+#include "DSEG7Classic_48.h"  // DSEG7Classic-Regular, chars 45-58 (-, 0-9, :)
 
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "SkyNet"
+#define WIFI_SSID          "network"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -173,12 +174,12 @@ void updateClock() {
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
         clockSprite.fillSprite(C_BG);
-        // FreeSansBold24pt7b — настоящий жирный вес, толстые штрихи.
-        // Orbitron_Light при 5× масштабе давал тонкие одиночные пиксели.
-        // sx=2.4 → "HH-MM" ~260px, влезает в 450px ширины спрайта
-        // sy=5.6 → ~170px высоты, заполняет 185px область
-        clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);
-        clockSprite.setTextSize(2.16f, 5.04f);
+        // DSEG7Classic-Regular — настоящий 7-сегментный LCD шрифт
+        // Нативный размер 48px. setTextSize(sx, sy) масштабирует под CLOCK_H=220
+        // sy = 220/52 ≈ 4.2  (52 = yAdvance из font struct)
+        // sx = 2.1   → "HH-MM" ~270px вписывается в левую половину спрайта
+        clockSprite.setFont(&DSEG7_48);
+        clockSprite.setTextSize(2.1f, 4.2f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
@@ -188,12 +189,12 @@ void updateClock() {
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);
-    clockSprite.setFont(&lgfx::fonts::FreeSansBold24pt7b);   // FreeSansBold24pt7b    FreeMonoBold24pt7b
-    clockSprite.setTextSize(2.16f, 5.04f);
+    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);  // полная высота, Y=0
+    clockSprite.setFont(&DSEG7_48);
+    clockSprite.setTextSize(2.1f, 4.2f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  298, CLOCK_H / 2 + 6);
+    clockSprite.drawString("-",  295, CLOCK_H / 2 + 6);
     clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
