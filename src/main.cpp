@@ -179,7 +179,7 @@ void updateClock() {
         // sy = 220/52 ≈ 4.2  (52 = yAdvance из font struct)
         // sx = 2.1   → "HH-MM" ~270px вписывается в левую половину спрайта
         clockSprite.setFont(&DSEG7_48);
-        clockSprite.setTextSize(2.1f, 4.2f);
+        clockSprite.setTextSize(1.2f, 4.2f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
@@ -191,7 +191,7 @@ void updateClock() {
 
     clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);  // полная высота, Y=0
     clockSprite.setFont(&DSEG7_48);
-    clockSprite.setTextSize(2.1f, 4.2f);
+    clockSprite.setTextSize(1.2f, 4.2f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
     clockSprite.drawString("-",  295, CLOCK_H / 2 + 6);
