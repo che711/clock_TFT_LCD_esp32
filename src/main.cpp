@@ -24,7 +24,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "network"
+#define WIFI_SSID          "SkyNet"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -127,7 +127,7 @@ static const uint32_t C_INFO_TEMP   = 0xE05020;  // тёплый оранжев�
 static const uint32_t C_INFO_CPU    = 0x0099CC;  // синий — CPU load
 static const uint32_t C_INFO_UPTIME = 0x778899;  // серый — uptime
 
-char prevHHMM[6] = "";
+char prevHHMM[9] = "";   // "HH-MM-SS" + null
 
 // ══════════════════════════════════════════════════════════════════
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -179,7 +179,7 @@ void updateClock() {
         // sy = 220/52 ≈ 4.2  (52 = yAdvance из font struct)
         // sx = 2.1   → "HH-MM" ~270px вписывается в левую половину спрайта
         clockSprite.setFont(&DSEG7_48);
-        clockSprite.setTextSize(2.1f, 4.2f);
+        clockSprite.setTextSize(1.35f, 4.3f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
         clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
@@ -191,10 +191,10 @@ void updateClock() {
 
     clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);  // полная высота, Y=0
     clockSprite.setFont(&DSEG7_48);
-    clockSprite.setTextSize(2.1f, 4.2f);
+    clockSprite.setTextSize(1.35f, 4.3f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  295, CLOCK_H / 2 + 6);
+    clockSprite.drawString("-",  310, CLOCK_H / 2 + 6);
     clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
