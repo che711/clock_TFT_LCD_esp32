@@ -24,7 +24,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "SkyNet"
+#define WIFI_SSID          "network"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -114,7 +114,7 @@ static const uint32_t C_SSID   = 0xFFE040;
 // ── Геометрия ─────────────────────────────────────────────────────
 #define SCR_W    480
 #define CLOCK_X  15
-#define CLOCK_Y  30       // опущено на 10% высоты экрана (320×10%=32px) от Y=5
+#define CLOCK_Y  30       // опущено на ~7% высоты экрана (320×10%=32px) от Y=5
 #define CLOCK_W  450
 #define CLOCK_H  220      // было 185 — FreeSansBold×5.04 ≈ 207px, нужен запас
 
