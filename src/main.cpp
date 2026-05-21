@@ -24,7 +24,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "network"
+#define WIFI_SSID          "SkyNet"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -167,35 +167,22 @@ void updateClock() {
     struct tm ti;
     if (!getLocalTime(&ti)) return;
 
-    char hhmm[6];
-    snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
+    char timeStr[9];
+    snprintf(timeStr, sizeof(timeStr), "%02d-%02d-%02d",
+             ti.tm_hour, ti.tm_min, ti.tm_sec);
 
-    // HH-MM перерисовываем только при смене минуты
-    if (strcmp(hhmm, prevHHMM) != 0) {
-        strcpy(prevHHMM, hhmm);
-        clockSprite.fillSprite(C_BG);
-        // DSEG7Classic-Regular — настоящий 7-сегментный LCD шрифт
-        // Нативный размер 48px. setTextSize(sx, sy) масштабирует под CLOCK_H=220
-        // sy = 220/52 ≈ 4.2  (52 = yAdvance из font struct)
-        // sx = 2.1   → "HH-MM" ~270px вписывается в левую половину спрайта
-        clockSprite.setFont(&DSEG7_48);
-        clockSprite.setTextSize(1.35f, 4.3f);
-        clockSprite.setTextColor(C_CLOCK);
-        clockSprite.setTextDatum(lgfx::MC_DATUM);
-        clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
-    }
-
-    // Секунды — каждую секунду, только их область
-    char ss[3];
-    snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
-
-    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);  // полная высота, Y=0
+    clockSprite.fillSprite(C_BG);
     clockSprite.setFont(&DSEG7_48);
     clockSprite.setTextSize(1.35f, 4.3f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  310, CLOCK_H / 2 + 6);
-    clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
+
+    // Bold simulation: 3 прохода ±1px по X
+    // Горизонтальные сегменты: sy=4.3 → ~15px
+    // Вертикальные сегменты:   sx=1.35 → ~5px нативно + 2px = ~7px
+    // Одна строка по центру спрайта = равномерный интервал между цифрами
+    for (int dx = -1; dx <= 1; dx++)
+        clockSprite.drawString(timeStr, CLOCK_W / 2 + dx, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
