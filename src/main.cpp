@@ -1,16 +1,18 @@
 /**
  * ESP32-S3 + ILI9488 Clock
- * Orbitron_Light_32 · Sprite · Плавное обновление секунд
+ * DSEG7Classic · Sprite · Плавное обновление секунд
  *
  * Структура:
- *   src/main.cpp   — логика, дисплей, HTTP
- *   src/webpage.h  — статичный HTML (данные через /api/stats)
+ *   src/main.cpp          — логика, дисплей, HTTP
+ *   src/webpage.h         — статичный HTML (данные через /api/stats)
+ *   src/DSEG7Classic_48.h — шрифт DSEG7Classic (chars 45-58)
  *
  * API:
  *   GET /                       → веб-дашборд
  *   GET /api/stats              → JSON со всеми данными
  *   GET /api/power?on=1|0       → вкл/выкл подсветку
  *   GET /api/brightness?value=N → яркость 0..100
+ *   GET /api/reboot             → перезагрузка
  */
 
 #include <Arduino.h>
@@ -80,16 +82,20 @@ WebServer          server(80);
 // ── Состояние дисплея ─────────────────────────────────────────────
 bool displayOn      = true;
 int  brightness     = 200;   // 0-255
-bool forceBarRedraw = false; // флаг: перерисовать нижнюю полосу принудительно
+bool forceBarRedraw = false;
 
-// ── CPU load (два FreeRTOS-таска) ────────────────────────────────
-// idleCountTask крутится на минимальном приоритете, считает итерации.
-// cpuMonTask раз в секунду сравнивает с калиброванным максимумом.
+// ── CPU load ─────────────────────────────────────────────────────
+// idleCountTask должен вызывать taskYIELD() — иначе плотный цикл
+// голодит шедулер и мешает loop() получать процессорное время.
+// Без yield на ESP32-S3 / Arduino-ESP32 3.x serial может не работать.
 static volatile uint32_t s_idleCount = 0;
-static volatile int      s_cpuLoad   = 0;   // 0-100 %
+static volatile int      s_cpuLoad   = 0;
 
 static void idleCountTask(void*) {
-    for (;;) s_idleCount++;   // pure busy-count at idle priority
+    for (;;) {
+        s_idleCount++;
+        taskYIELD();   // ← обязательно: уступаем слот другим задачам
+    }
 }
 
 static void cpuMonTask(void*) {
@@ -98,7 +104,7 @@ static void cpuMonTask(void*) {
         vTaskDelay(pdMS_TO_TICKS(1000));
         uint32_t c  = s_idleCount;
         s_idleCount = 0;
-        if (c > hi) hi = c;                         // auto-calibrate max
+        if (c > hi) hi = c;
         s_cpuLoad = hi ? constrain(100 - (int)((uint64_t)c * 100 / hi), 0, 100) : 0;
     }
 }
@@ -114,20 +120,11 @@ static const uint32_t C_SSID   = 0xFFE040;
 // ── Геометрия ─────────────────────────────────────────────────────
 #define SCR_W    480
 #define CLOCK_X  15
-#define CLOCK_Y  30       // опущено на ~7% высоты экрана (320×10%=32px) от Y=5
+#define CLOCK_Y  30
 #define CLOCK_W  450
-#define CLOCK_H  220      // было 185 — FreeSansBold×5.04 ≈ 207px, нужен запас
+#define CLOCK_H  220
 
-// Информационная полоса под часами (Y: 198..275, 77px)
-#define INFO_Y   (CLOCK_Y + CLOCK_H + 8)   // = 198
-#define INFO_CY  (INFO_Y + 38)              // = 236  центр строки
-
-// Цвета для инфо-строки
-static const uint32_t C_INFO_TEMP   = 0xE05020;  // тёплый оранжевый — температура
-static const uint32_t C_INFO_CPU    = 0x0099CC;  // синий — CPU load
-static const uint32_t C_INFO_UPTIME = 0x778899;  // серый — uptime
-
-char prevHHMM[9] = "";   // "HH-MM-SS" + null
+char prevHHMM[9] = "";   // "HH-MM" + null (сравниваем только при смене минуты)
 
 // ══════════════════════════════════════════════════════════════════
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -161,41 +158,48 @@ void drawLayout() {
     lcd.fillRect(0, 280, SCR_W,  40, C_BAR_BG);
 }
 
+// Рисует строку N раз со смещением dx по X для симуляции bold.
+// Вертикальные сегменты DSEG7 при sx=1.35 дают ~5px.
+// 5 проходов (-2..+2) добавляют +4px → ~9px.
+// Горизонтальные при этом не меняются (они уже ~15px от sy=4.3).
+static void drawBold(LGFX_Sprite& s, const char* str, int x, int y) {
+    for (int dx = -2; dx <= 2; dx++)
+        s.drawString(str, x + dx, y);
+}
+
 void updateClock() {
     if (!displayOn) return;
 
     struct tm ti;
     if (!getLocalTime(&ti)) return;
 
+    const int cy = CLOCK_H / 2 + 6;
+
     char hhmm[6];
     snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
 
-    // HH-MM перерисовываем только при смене минуты
+    // ── HH-MM: только при смене минуты ──────────────────────────
     if (strcmp(hhmm, prevHHMM) != 0) {
         strcpy(prevHHMM, hhmm);
         clockSprite.fillSprite(C_BG);
-        // DSEG7Classic-Regular — настоящий 7-сегментный LCD шрифт
-        // Нативный размер 48px. setTextSize(sx, sy) масштабирует под CLOCK_H=220
-        // sy = 220/52 ≈ 4.2  (52 = yAdvance из font struct)
-        // sx = 2.1   → "HH-MM" ~270px вписывается в левую половину спрайта
         clockSprite.setFont(&DSEG7_48);
         clockSprite.setTextSize(1.35f, 4.3f);
         clockSprite.setTextColor(C_CLOCK);
         clockSprite.setTextDatum(lgfx::MC_DATUM);
-        clockSprite.drawString(hhmm, 148, CLOCK_H / 2 + 6);
+        drawBold(clockSprite, hhmm, 148, cy);
     }
 
-    // Секунды — каждую секунду, только их область
+    // ── Секунды: каждую секунду, только их область ───────────────
     char ss[3];
     snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
 
-    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);  // полная высота, Y=0
+    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);
     clockSprite.setFont(&DSEG7_48);
     clockSprite.setTextSize(1.35f, 4.3f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    clockSprite.drawString("-",  310, CLOCK_H / 2 + 6);
-    clockSprite.drawString(ss,  385, CLOCK_H / 2 + 6);
+    drawBold(clockSprite, "-",  310, cy);
+    drawBold(clockSprite, ss,   385, cy);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
@@ -216,50 +220,39 @@ void updateBottomBar() {
              ti.tm_mday, mo[ti.tm_mon], ti.tm_year + 1900);
 
     static char prevDate[14] = "", prevIP[16] = "", prevSSID[33] = "";
-    if (!forceBarRedraw          &&
-        strcmp(dateBuf,      prevDate) == 0 &&
-        strcmp(ip.c_str(),   prevIP)   == 0 &&
-        strcmp(ssid.c_str(), prevSSID) == 0) return;
+    if (!forceBarRedraw
+        && strcmp(dateBuf,      prevDate) == 0
+        && strcmp(ip.c_str(),   prevIP)   == 0
+        && strcmp(ssid.c_str(), prevSSID) == 0) return;
 
     forceBarRedraw = false;
-
     strncpy(prevDate, dateBuf,       sizeof(prevDate)  - 1);
     strncpy(prevIP,   ip.c_str(),    sizeof(prevIP)    - 1);
     strncpy(prevSSID, ssid.c_str(),  sizeof(prevSSID)  - 1);
 
     lcd.fillRect(0, 280, SCR_W, 40, C_BAR_BG);
     lcd.setFont(&fonts::Font2);
-    int cy = 300;
+    int bcy = 300;
 
-    lcd.setTextColor(C_DATE,  C_BAR_BG);
-    lcd.setTextDatum(lgfx::ML_DATUM);
-    lcd.drawString(dateBuf, 12, cy);
+    lcd.setTextColor(C_DATE,  C_BAR_BG); lcd.setTextDatum(lgfx::ML_DATUM);
+    lcd.drawString(dateBuf, 12, bcy);
 
-    lcd.setTextColor(C_IP,    C_BAR_BG);
-    lcd.setTextDatum(lgfx::MC_DATUM);
-    lcd.drawString(ip, 240, cy);
+    lcd.setTextColor(C_IP,    C_BAR_BG); lcd.setTextDatum(lgfx::MC_DATUM);
+    lcd.drawString(ip, 240, bcy);
 
-    lcd.setTextColor(C_SSID,  C_BAR_BG);
-    lcd.setTextDatum(lgfx::MR_DATUM);
-    lcd.drawString(ssid, SCR_W - 12, cy);
+    lcd.setTextColor(C_SSID,  C_BAR_BG); lcd.setTextDatum(lgfx::MR_DATUM);
+    lcd.drawString(ssid, SCR_W - 12, bcy);
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  HTTP — /   (статичный HTML)
+//  HTTP
 // ══════════════════════════════════════════════════════════════════
-void handleRoot() {
-    server.send_P(200, "text/html", WEBPAGE);
-}
+void handleRoot() { server.send_P(200, "text/html", WEBPAGE); }
 
-// ══════════════════════════════════════════════════════════════════
-//  HTTP — /api/stats   (полный JSON)
-// ══════════════════════════════════════════════════════════════════
 void handleStats() {
     struct tm ti;
     bool ntpOk = getLocalTime(&ti);
-
-    char timeBuf[9]  = "--:--:--";
-    char dateBuf[20] = "---";
+    char timeBuf[9] = "--:--:--", dateBuf[20] = "---";
     if (ntpOk) {
         snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d",
                  ti.tm_hour, ti.tm_min, ti.tm_sec);
@@ -268,84 +261,71 @@ void handleStats() {
         snprintf(dateBuf, sizeof(dateBuf), "%02d %s %04d",
                  ti.tm_mday, mo[ti.tm_mon], ti.tm_year + 1900);
     }
+    uint32_t hf = ESP.getFreeHeap(), ht = ESP.getHeapSize(), hm = ESP.getMinFreeHeap();
+    float    tp = temperatureRead();
 
-    uint32_t heapFree  = ESP.getFreeHeap();
-    uint32_t heapTotal = ESP.getHeapSize();
-    uint32_t heapMin   = ESP.getMinFreeHeap();
-    float    temp      = temperatureRead();
-
-    String json = "{";
-    json += "\"time\":\""         + String(timeBuf)                    + "\",";
-    json += "\"date\":\""         + String(dateBuf)                    + "\",";
-    json += "\"ip\":\""           + WiFi.localIP().toString()          + "\",";
-    json += "\"ssid\":\""         + WiFi.SSID()                       + "\",";
-    json += "\"rssi\":"           + String(WiFi.RSSI())                + ",";
-    json += "\"uptime\":\""       + uptimeStr()                        + "\",";
-    json += "\"temp\":"           + String(temp, 1)                    + ",";
-    json += "\"chip\":\""         + String(ESP.getChipModel())         + "\",";
-    json += "\"chip_rev\":"       + String(ESP.getChipRevision())      + ",";
-    json += "\"cpu_mhz\":"        + String(ESP.getCpuFreqMHz())        + ",";
-    json += "\"heap_free\":"      + String(heapFree)                   + ",";
-    json += "\"heap_total\":"     + String(heapTotal)                  + ",";
-    json += "\"heap_min_free\":"  + String(heapMin)                    + ",";
-    json += "\"reset_reason\":\"" + String(resetReasonStr())           + "\",";
-    json += "\"display_on\":"     + String(displayOn ? "true":"false") + ",";
-    json += "\"brightness\":"     + String(brightness * 100 / 255)     + ",";
-    json += "\"cpu_load\":"       + String(s_cpuLoad);
-    json += "}";
-
-    server.send(200, "application/json", json);
+    String j = "{";
+    j += "\"time\":\""         + String(timeBuf)                    + "\",";
+    j += "\"date\":\""         + String(dateBuf)                    + "\",";
+    j += "\"ip\":\""           + WiFi.localIP().toString()          + "\",";
+    j += "\"ssid\":\""         + WiFi.SSID()                       + "\",";
+    j += "\"rssi\":"           + String(WiFi.RSSI())                + ",";
+    j += "\"uptime\":\""       + uptimeStr()                        + "\",";
+    j += "\"temp\":"           + String(tp, 1)                      + ",";
+    j += "\"chip\":\""         + String(ESP.getChipModel())         + "\",";
+    j += "\"chip_rev\":"       + String(ESP.getChipRevision())      + ",";
+    j += "\"cpu_mhz\":"        + String(ESP.getCpuFreqMHz())        + ",";
+    j += "\"heap_free\":"      + String(hf)                         + ",";
+    j += "\"heap_total\":"     + String(ht)                         + ",";
+    j += "\"heap_min_free\":"  + String(hm)                         + ",";
+    j += "\"reset_reason\":\"" + String(resetReasonStr())           + "\",";
+    j += "\"display_on\":"     + String(displayOn ? "true":"false") + ",";
+    j += "\"brightness\":"     + String(brightness * 100 / 255)     + ",";
+    j += "\"cpu_load\":"       + String(s_cpuLoad);
+    j += "}";
+    server.send(200, "application/json", j);
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HTTP — /api/power?on=1|0
-// ══════════════════════════════════════════════════════════════════
 void handlePower() {
     if (server.hasArg("on")) {
         displayOn = (server.arg("on") != "0");
         lcd.setBrightness(displayOn ? brightness : 0);
         if (displayOn) {
-            prevHHMM[0]   = '\0';    // принудительная перерисовка часов
-            forceBarRedraw = true;   // принудительная перерисовка нижней полосы
+            prevHHMM[0]    = '\0';
+            forceBarRedraw = true;
             drawLayout();
         }
-        Serial.printf("[API] power → %s\n", displayOn ? "ON" : "OFF");
+        Serial.printf("[API] power -> %s\n", displayOn ? "ON" : "OFF");
     }
     server.send(200, "application/json",
-        String("{\"display_on\":") + (displayOn ? "true" : "false") + "}");
+        String("{\"display_on\":") + (displayOn ? "true":"false") + "}");
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HTTP — /api/brightness?value=0..100
-// ══════════════════════════════════════════════════════════════════
 void handleBrightness() {
     if (server.hasArg("value")) {
-        int pct    = constrain(server.arg("value").toInt(), 0, 100);
+        int pct = constrain(server.arg("value").toInt(), 0, 100);
         brightness = pct * 255 / 100;
         if (displayOn) lcd.setBrightness(brightness);
-        Serial.printf("[API] brightness → %d%%\n", pct);
+        Serial.printf("[API] brightness -> %d%%\n", pct);
     }
     server.send(200, "application/json",
         String("{\"brightness\":") + String(brightness * 100 / 255) + "}");
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HTTP — /api/reboot
-// ══════════════════════════════════════════════════════════════════
 void handleReboot() {
     server.send(200, "application/json", "{\"rebooting\":true}");
-    Serial.println("[API] reboot requested");
-    delay(200);   // дать время отправить ответ
+    Serial.println("[API] reboot");
+    delay(200);
     ESP.restart();
 }
 
-
+// ══════════════════════════════════════════════════════════════════
+//  SERIAL REPORT
 // ══════════════════════════════════════════════════════════════════
 void serialReport() {
     struct tm ti;
     bool ok = getLocalTime(&ti);
-
-    Serial.println("─────────────────────────────────");
+    Serial.println("-----------------------------------");
     if (ok) {
         char buf[24];
         snprintf(buf, sizeof(buf), "%02d:%02d:%02d  %02d.%02d.%04d",
@@ -362,11 +342,11 @@ void serialReport() {
                   WiFi.RSSI());
     Serial.printf("  Temp    : %.1f C\n",   temperatureRead());
     Serial.printf("  CPU     : %d%%\n",     s_cpuLoad);
-    Serial.printf("  Heap    : %u free / %u total  (min ever %u)\n",
+    Serial.printf("  Heap    : %u free / %u total  (min %u)\n",
                   ESP.getFreeHeap(), ESP.getHeapSize(), ESP.getMinFreeHeap());
     Serial.printf("  Display : %s  brightness %d%%\n",
                   displayOn ? "ON" : "OFF", brightness * 100 / 255);
-    Serial.println("─────────────────────────────────");
+    Serial.println("-----------------------------------");
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -374,16 +354,16 @@ void serialReport() {
 // ══════════════════════════════════════════════════════════════════
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n═══ ESP32-S3 Clock ═══");
+    delay(200);   // дать UART время инициализироваться
+    Serial.println("\n=== ESP32-S3 Clock ===");
 
     lcd.init();
     lcd.setRotation(1);
     lcd.setBrightness(brightness);
     lcd.fillScreen(C_BG);
 
-    if (!clockSprite.createSprite(CLOCK_W, CLOCK_H)) {
+    if (!clockSprite.createSprite(CLOCK_W, CLOCK_H))
         Serial.println("[WARN] Sprite allocation failed");
-    }
 
     lcd.setFont(&fonts::Font4);
     lcd.setTextColor(C_BAR_BG, C_BG);
@@ -407,8 +387,9 @@ void setup() {
         Serial.println("WiFi    : timeout");
     }
 
-    // CPU load tasks (Core 1, разные приоритеты)
-    xTaskCreatePinnedToCore(idleCountTask, "idle", 1024, NULL, 1,               NULL, 1);
+    // CPU load tasks — Core 1.
+    // idleCountTask использует taskYIELD() чтобы не голодить шедулер.
+    xTaskCreatePinnedToCore(idleCountTask, "idle", 1024, NULL, 1,                  NULL, 1);
     xTaskCreatePinnedToCore(cpuMonTask,    "cpuM", 2048, NULL, tskIDLE_PRIORITY+2, NULL, 1);
 
     server.on("/",               HTTP_GET, handleRoot);
@@ -421,7 +402,7 @@ void setup() {
 
     drawLayout();
     prevHHMM[0] = '\0';
-    Serial.println("═══════════════════════");
+    Serial.println("======================");
 }
 
 // ══════════════════════════════════════════════════════════════════
