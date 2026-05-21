@@ -489,13 +489,41 @@ async function tryApi(url) {
 
 // Копирование curl-команды в буфер обмена
 async function copyCmd(id, btn) {
-  const text = document.getElementById(id).textContent;
+  const text = document.getElementById(id).textContent.trim();
+  
   try {
+    // Основной способ
     await navigator.clipboard.writeText(text);
-    btn.textContent = '✓ Copied';
-    btn.classList.add('ok');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2000);
-  } catch { toast('Clipboard unavailable', false); }
+    showCopied(btn);
+  } 
+  catch (err) {
+    // Fallback для HTTP
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showCopied(btn);
+    } catch (fallbackErr) {
+      toast('Clipboard unavailable (try HTTPS)', false);
+      console.error('Copy failed:', err, fallbackErr);
+    }
+  }
+}
+
+function showCopied(btn) {
+  const originalText = btn.textContent;
+  btn.textContent = '✓ Copied';
+  btn.classList.add('ok');
+  
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.classList.remove('ok');
+  }, 2000);
 }
 
 // ── Обновление секунд отдельно (без мерцания) ────────────────────
