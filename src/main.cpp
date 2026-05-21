@@ -26,7 +26,7 @@
 // ══════════════════════════════════════════════════════════════════
 //  НАСТРОЙКИ
 // ══════════════════════════════════════════════════════════════════
-#define WIFI_SSID          "network"
+#define WIFI_SSID          "SkyNet"
 #define WIFI_PASS          "password"
 #define TZ_STRING          "CET-1CEST,M3.5.0,M10.5.0/3"
 #define NTP_SERVER         "pool.ntp.org"
@@ -173,33 +173,22 @@ void updateClock() {
     struct tm ti;
     if (!getLocalTime(&ti)) return;
 
-    const int cy = CLOCK_H / 2 + 6;
+    char timeStr[9];
+    snprintf(timeStr, sizeof(timeStr), "%02d-%02d-%02d",
+             ti.tm_hour, ti.tm_min, ti.tm_sec);
 
-    char hhmm[6];
-    snprintf(hhmm, sizeof(hhmm), "%02d-%02d", ti.tm_hour, ti.tm_min);
-
-    // ── HH-MM: только при смене минуты ──────────────────────────
-    if (strcmp(hhmm, prevHHMM) != 0) {
-        strcpy(prevHHMM, hhmm);
-        clockSprite.fillSprite(C_BG);
-        clockSprite.setFont(&DSEG7_48);
-        clockSprite.setTextSize(1.35f, 4.3f);
-        clockSprite.setTextColor(C_CLOCK);
-        clockSprite.setTextDatum(lgfx::MC_DATUM);
-        drawBold(clockSprite, hhmm, 148, cy);
-    }
-
-    // ── Секунды: каждую секунду, только их область ───────────────
-    char ss[3];
-    snprintf(ss, sizeof(ss), "%02d", ti.tm_sec);
-
-    clockSprite.fillRect(272, 0, 178, CLOCK_H, C_BG);
+    clockSprite.fillSprite(C_BG);
     clockSprite.setFont(&DSEG7_48);
     clockSprite.setTextSize(1.35f, 4.3f);
     clockSprite.setTextColor(C_CLOCK);
     clockSprite.setTextDatum(lgfx::MC_DATUM);
-    drawBold(clockSprite, "-",  310, cy);
-    drawBold(clockSprite, ss,   385, cy);
+
+    // Bold simulation: 3 прохода ±1px по X
+    // Горизонтальные сегменты: sy=4.3 → ~15px
+    // Вертикальные сегменты:   sx=1.35 → ~5px нативно + 2px = ~7px
+    // Одна строка по центру спрайта = равномерный интервал между цифрами
+    for (int dx = -1; dx <= 1; dx++)
+        clockSprite.drawString(timeStr, CLOCK_W / 2 + dx, CLOCK_H / 2 + 6);
 
     clockSprite.pushSprite(CLOCK_X, CLOCK_Y);
 }
